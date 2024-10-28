@@ -45,7 +45,8 @@
                                             <strong>강의료</strong>
                                           </v-col>
                                           <v-col class="d-flex align-center justify-start" style="padding: 10px">
-                                            {{ formatPrice(group.price) }}원
+                                            <span v-if="lectureInfo?.lectureType === 'LESSON'" style="margin-right: 7px;">1개월 </span>
+                                             {{ formatPrice(group.price) }}원
                                           </v-col>
                                         </v-row>
                                         <v-row>
@@ -173,7 +174,7 @@
                           </tr>
                         </tbody>
                     </table>
-                    <v-btn v-if="isLogin === true" @click="openApplyModal" style="width: 90%; margin: 20px 0 10px; background-color: #0d6efd; color: #fff; font-weight: 700;">신청하기</v-btn>
+                    <v-btn v-if="isLogin === true &&  userRole === 'TUTEE'" @click="openApplyModal" style="width: 90%; margin: 20px 0 10px; background-color: #0d6efd; color: #fff; font-weight: 700;">신청하기</v-btn>
                 </aside>
             </v-col>
         </v-row>
@@ -182,7 +183,7 @@
         </v-snackbar>
     </v-container>
 
-    <v-dialog v-model="isApplyModalOpen" max-width="600px" maxHeight="400px">
+    <v-dialog v-model="isApplyModalOpen" max-width="600px">
         <v-card style="padding: 40px 20px 50px; border-radius: 10px;">
             <div style="font-size: 24px; font-weight: 700; margin: auto;">강의 신청</div>
             <v-card-text>
@@ -212,7 +213,7 @@
                 <!-- 강의 그룹 선택 시 추가 정보 입력 폼 -->
                 <transition name="fade">
                     <div v-if="selectedLectureGroup" style="margin-top: 20px;">
-                        <div v-if="lectureInfo?.lectureType === 'LESSON'" >
+                        <div v-if="lectureInfo?.lectureType === 'LESSON'" style="padding: 0 10px;">
                             <hr style="margin: 30px 0"/>
                             <div style="font-size: 18px; font-weight: 700; color: #5d8dfc; margin: 10px 0;">추가 정보 입력</div>
                             <v-row>
@@ -220,18 +221,18 @@
                                     <label for="startDate" class="form-label">시작일</label>
                                     <input v-model="startDate" id="startDate" class="form-control" type="date" />
                                 </v-col>
-                                <v-col>
+                                <!-- <v-col>
                                     <label for="endDate" class="form-label">종료일</label>
                                     <input v-model="endDate" class="form-control" type="date" />
-                                </v-col>
+                                </v-col> -->
                             </v-row>
                             <v-row>
                                 <v-col>
-                                    <label for="location" class="form-label">강의 위치</label>
-                                    <v-btn style="border: 1px solid #ccc; padding-left:5px;" variant="outlined" class="ml-3 mb-2"
-                                      @click="updateAddress()"><v-icon>mdi-map-search</v-icon> 주소 검색</v-btn>
-                                      <div>{{this.location}}</div>
-                                    <input v-model="detailAddress" id="detailAddress" class="form-control" type="text" />
+                                    <label for="location" class="form-label">강의 위치</label><br/>
+                                    <v-btn style="border: 1px solid #ccc;" variant="outlined"
+                                      @click="updateAddress()"> 주소 검색</v-btn>
+                                      <span style="margin: 5px 10px; font-weight: 700;">{{this.location}}</span>
+                                    <input v-model="detailAddress" id="detailAddress" class="form-control" placeholder="상세 주소를 입력해주세요" type="text" style="margin-top: 10px;"/>
                                 </v-col>
                             </v-row>
                         </div>
@@ -300,6 +301,7 @@ export default {
   data() {
     return {
     isLogin: false,
+    userRole: null,
       activeTab: 'lecture-info',
       isApplyModalOpen: false, // 모달 열림 상태
       availableLectureGroups: [],
@@ -343,6 +345,7 @@ export default {
     const token = localStorage.getItem('token');
     if (token) {
       this.isLogin = true;
+      this.userRole = localStorage.getItem('role');
     }
   },
   async mounted() {
@@ -557,7 +560,7 @@ sendDeleteQueue() {
 },
 selectLectureGroup(group) {
     this.selectedLectureGroup = group;
-    console.log(this.selectedLectureGroup.lectureGroupId) // 잘 들어옴
+    console.log("선택한 강의 그룹 아이디:" + this.selectedLectureGroup.lectureGroupId) // 잘 들어옴
 },
 
 async submitApplication() {
@@ -578,7 +581,7 @@ async submitApplication() {
         };
 
         try {
-            // 대기열에 넣기
+            // 대기열에 넣기 (lecture-add-queue)
             await axios.post(`${process.env.VUE_APP_API_BASE_URL}/lecture-service/lecture-add-queue`, null, { 
                 params: requestData // 쿼리 파라미터로 전달
             });
@@ -630,10 +633,17 @@ async submitApplication() {
     else if (this.lectureInfo.lectureType === "LESSON") {
 
         // 필수 입력 값 체크
-        if (!this.startDate || !this.endDate || !this.location) {
-            this.snackbar = { show: true, message: "시작일, 종료일, 위치를 입력해 주세요.", color: "error" };
+        if (!this.startDate || !this.location) {
+            this.snackbar = { show: true, message: "시작일과 수업 위치를 입력해 주세요.", color: "error" };
             return;
         }
+
+        // endDate를 startDate의 한 달 뒤로 설정
+        const start = new Date(this.startDate);
+        const end = new Date(start);
+        end.setMonth(start.getMonth() + 1); // 한 달 뒤로 설정
+        this.endDate = end.toISOString().split('T')[0]; // YYYY-MM-DD 형식으로 변환
+        
         console.log(this.location + this.detailAddress)
         const requestData = {
             lectureGroupId: this.selectedLectureGroup.lectureGroupId, // 선택된 강의 그룹 ID
@@ -758,7 +768,7 @@ async processFreeLesson(){
     border-radius: 10px;
     padding: 30px 5px;
     margin-top: 60px; /* 화면 상단과 40px 거리 */
-    top: 40px;
+    top: 60px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* 그림자 추가 */
 }
 

@@ -3,7 +3,8 @@ import FirstPage from '@/views/FirstPage.vue';
 import TuteeAppliedList from '@/pendingLectures/TuteeAppliedList.vue';
 import TutorAppliedList from '@/pendingLectures/TutorAppliedList.vue';
 import AdminAppliedList from '@/pendingLectures/AdminAppliedList.vue';
-import CreateLectureView from '@/views/CreateLectureView.vue';
+import CreateLectureView from '@/views/lecture/detail/CreateLectureView.vue';
+import EditLectureInfoView from '@/views/lecture/detail/EditLectureInfoView.vue';
 import LectureDetailView from '@/views/lecture/detail/LectureDetailView.vue';
 
 export const FirstRouter = [
@@ -40,6 +41,13 @@ export const FirstRouter = [
         path: "/create-lecture",
         name: "CreateLecture",
         component: CreateLectureView,
+    },
+
+    // 강의 내용 수정 페이지
+    {
+        path: "/edit-lecture/:id",
+        name: "EditLecture",
+        component: EditLectureInfoView
     },
 
     // 강의 상세 정보 페이지
